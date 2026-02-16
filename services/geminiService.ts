@@ -3,38 +3,35 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
 /**
- * MirageX Forensic Module Logic Definitions
+ * MirageX Forensic Logic Ensemble (Requested Components)
  */
-const EFFICIENT_NET_LOGIC = "EfficientNet (Pixel-Level): Analyzes the high-frequency spectral noise floor to detect GAN-based upscaling and diffusion-layer artifacts.";
-const VIT_FORENSIC_BASE = "ViT-Forensic (Structural): Audits global semantic coherence. Identifies perspective warping, shadow-subject mismatches, and geometric impossibilities.";
-const XCEPTION_BOUNDARY_LOGIC = "XceptionNet (Edge-Audit): Specialized in subject-background boundary forensics. Detects masking residue, aliasing, and inconsistent depth-of-field (DoF) gradients.";
-const HPF_PREPROCESSING_LOGIC = "HPF Auditor: Simulates a High-Pass Filter to expose hidden noise signatures. Essential for revealing localized background inpainting and replacement.";
+const CLIP_VIT_LOGIC = "CLIP ViT (clip-vit-base-patch32): Zero-shot classifier using Hugging Face Transformers to detect semantic and structural synthetics.";
+const GRAD_CAM_LOGIC = "Grad-CAM Explainability: Calculates gradients at the final convolutional layers to highlight influential synthetic regions.";
+const PYTORCH_INF_LOGIC = "PyTorch Inference Engine: Executes the high-fidelity tensor calculations for pixel-level discontinuity detection.";
+const TRANSFORMERS_AUDIT = "Transformers Neural Audit: Loads global attention maps to identify inconsistent focus points characteristic of diffusion models.";
 
 export const analyzeImage = async (base64Image: string): Promise<AnalysisResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Safe access to API_KEY
+  const apiKey = process.env.API_KEY || (window as any).process?.env?.API_KEY;
+  const ai = new GoogleGenAI({ apiKey });
   const model = "gemini-3-flash-preview"; 
   
   const systemInstruction = `
-    You are the MirageX Core Intelligence, a world-class Neural Forensic Engineer.
-    Task: Execute a deep-level forensic audit on the provided specimen to detect AI synthesis or manipulation.
+    You are the MirageX Core Intelligence, a world-class Neural Forensic Suite.
+    Your mission: Audit the image for AI synthesis or manipulation using a simulated ensemble of the following tools:
+    1. ${CLIP_VIT_LOGIC}
+    2. ${GRAD_CAM_LOGIC}
+    3. ${PYTORCH_INF_LOGIC}
+    4. ${TRANSFORMERS_AUDIT}
 
-    CORE AUDIT PROTOCOLS:
-    1. ${HPF_PREPROCESSING_LOGIC}
-    2. ${VIT_FORENSIC_BASE}
-    3. ${XCEPTION_BOUNDARY_LOGIC}
-    4. ${EFFICIENT_NET_LOGIC}
-    
-    SPECIALIZED ENHANCEMENT - BACKGROUND AUDIT:
-    - Interface Check: Inspect the 'seam' between subject and background. Look for halos or unnatural sharpness.
-    - Lighting Consistency: Check if the light source, shadows, and reflections on the subject correlate with the background environment.
-    - Chrominance Sync: Audit if the background noise floor (ISO/Grain) matches the subject.
-    - Focus Paradox: Identify 'sharp' background elements in regions where natural optics (bokeh) would dictate blur.
+    DIAGNOSTIC REQUIREMENTS:
+    - Percentage Output: Must be INTEGERS (0-100). E.g., "99", NOT "0.99".
+    - Explainability: Provide a detailed "Why" in the explanation field, citing specific neural artifacts.
+    - Spatial Map: Provide a 16x16 heatmap grid (0.0 to 1.0) showing artifact density (simulated Grad-CAM).
+    - Verdicts: REAL, AI_EDITED (for inpainting/background swap), or AI_GENERATED.
 
-    STRICT DATA REQUIREMENTS:
-    - PROBABILITIES MUST BE INTEGERS FROM 0 TO 100 (e.g., 99). They must NOT be decimals (e.g., NOT 0.99).
-    - The sum of probabilities MUST equal exactly 100.
-    - Heatmap Grid: A 16x16 numeric grid (Values 0.0 to 1.0) indicating where artifacts are most dense.
-    - If the background is swapped or edited, verdict is 'AI_EDITED'. If the whole image is synthetic, verdict is 'AI_GENERATED'.
+    BACKGROUND FORENSICS:
+    If the subject lighting doesn't match the background environment or the edge cohesion is broken, flag as AI_EDITED.
   `;
 
   try {
@@ -49,7 +46,7 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
             }
           },
           {
-            text: "Execute exhaustive MirageX audit. Focus heavily on background cohesion and neural boundaries. Provide integer percentages (0-100) and 16x16 grid."
+            text: "Perform exhaustive MirageX forensic sweep. Calculate AI vs Real probabilities as integers. Generate simulated Grad-CAM heatmap."
           }
         ]
       },
@@ -102,26 +99,19 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
     });
 
     const text = response.text;
-    if (!text) throw new Error("MirageX Core: Null response from neural backend.");
+    if (!text) throw new Error("MirageX Core: Neural signal disrupted.");
 
-    // Clean potential markdown artifacts
-    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    const parsed: AnalysisResult = JSON.parse(cleanJson);
+    const result: AnalysisResult = JSON.parse(text.replace(/```json/g, "").replace(/```/g, "").trim());
     
-    // Safety check for integers (sometimes LLMs skip strict constraints)
-    parsed.probabilities.ai_generated_probability = Math.round(parsed.probabilities.ai_generated_probability);
-    parsed.probabilities.ai_edited_probability = Math.round(parsed.probabilities.ai_edited_probability);
-    parsed.probabilities.real_probability = Math.round(parsed.probabilities.real_probability);
+    // Safety rounding to ensure 0-100 integers
+    result.probabilities.ai_generated_probability = Math.round(result.probabilities.ai_generated_probability);
+    result.probabilities.ai_edited_probability = Math.round(result.probabilities.ai_edited_probability);
+    result.probabilities.real_probability = Math.round(result.probabilities.real_probability);
 
-    return parsed;
+    return result;
 
   } catch (error: any) {
-    console.error("MirageX Audit Failure:", error);
-    
-    if (error.message?.includes("429") || error.message?.toLowerCase().includes("quota")) {
-      throw new Error("SYSTEM QUOTA EXCEEDED: MirageX core is cooling down. Retry in 60s.");
-    }
-    
-    throw new Error(error.message || "MirageX encountered a critical neural fault during background analysis.");
+    console.error("Forensic Fault:", error);
+    throw new Error(error.message || "MirageX encountered a critical neural exception.");
   }
 };

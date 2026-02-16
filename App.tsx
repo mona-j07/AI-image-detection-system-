@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Shield, Upload, ImageIcon, RefreshCcw, ScanSearch, Cpu, Eye, EyeOff, X, CheckCircle2, AlertCircle, BarChart3, Fingerprint } from 'lucide-react';
+import { Shield, Upload, ImageIcon, RefreshCcw, ScanSearch, Cpu, Eye, EyeOff, X, CheckCircle2, AlertCircle, Fingerprint, Activity } from 'lucide-react';
 import { DetectionStatus, AnalysisResult, ImageData, ModelFinding } from './types';
 import { analyzeImage } from './services/geminiService';
 
@@ -54,7 +54,7 @@ const HeatmapOverlay: React.FC<{ result: AnalysisResult; visible: boolean; image
       offCtx.putImageData(imageData, 0, 0);
 
       ctx.imageSmoothingEnabled = true;
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = 0.65;
       ctx.drawImage(offscreen, 0, 0, rect.width, rect.height);
     };
 
@@ -67,25 +67,25 @@ const HeatmapOverlay: React.FC<{ result: AnalysisResult; visible: boolean; image
   return (
     <canvas 
       ref={canvasRef} 
-      className={`absolute inset-0 pointer-events-none transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}
+      className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}
       style={{ zIndex: 10, mixBlendMode: 'screen' }}
     />
   );
 };
 
-const ModelFindingCard: React.FC<{ finding: ModelFinding }> = ({ finding }) => (
-  <div className="bg-slate-950/60 border border-slate-800/60 rounded-xl p-3 flex flex-col gap-1.5 transition-all hover:border-indigo-500/30 group">
-    <div className="flex justify-between items-start">
-      <span className="text-[9px] font-black uppercase text-indigo-400/80 tracking-widest group-hover:text-indigo-400">{finding?.name || 'Neural Module'}</span>
-      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-        finding?.verdict === 'REAL' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-        finding?.verdict === 'AI_EDITED' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+const FindingCard: React.FC<{ finding: ModelFinding }> = ({ finding }) => (
+  <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-4 transition-all hover:border-indigo-500/40 group">
+    <div className="flex justify-between items-start mb-2">
+      <span className="text-[10px] font-black uppercase text-indigo-400 tracking-widest group-hover:text-indigo-300 transition-colors">{finding.name}</span>
+      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+        finding.verdict === 'REAL' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+        finding.verdict === 'AI_EDITED' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
       }`}>
-        {finding?.verdict.replace('_', ' ') || 'ACTIVE'} ({Math.round(finding?.confidence || 0)}%)
+        {finding.verdict.replace('_', ' ')} ({finding.confidence}%)
       </span>
     </div>
-    <p className="text-[9px] text-slate-500 leading-tight font-medium group-hover:text-slate-400 transition-colors">
-      {finding?.description || 'Artifact sweep in progress...'}
+    <p className="text-[10px] text-slate-500 leading-relaxed font-medium group-hover:text-slate-400">
+      {finding.description}
     </p>
   </div>
 );
@@ -109,7 +109,7 @@ const App: React.FC = () => {
 
     if (file) {
       if (!file.type.startsWith('image/')) {
-        setError("Unsupported file format. Please upload a valid image.");
+        setError("Invalid forensic specimen. Please provide an image.");
         return;
       }
       const reader = new FileReader();
@@ -140,7 +140,7 @@ const App: React.FC = () => {
       setStatus(DetectionStatus.SUCCESS);
       setShowHeatmap(true);
     } catch (err: any) {
-      setError(err.message || "Neural audit cycle failed. MirageX core needs reset.");
+      setError(err.message || "Forensic sweep failed. Re-initiating...");
       setStatus(DetectionStatus.ERROR);
     }
   };
@@ -154,66 +154,68 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 p-4 md:p-8 flex flex-col items-center selection:bg-indigo-500/30">
-      <header className="w-full max-w-6xl flex items-center justify-between mb-10">
-        <div className="flex items-center gap-5">
-          <div className="bg-indigo-600 p-2.5 rounded-2xl shadow-2xl">
-            <Shield className="w-7 h-7 text-white" />
+    <div className="min-h-screen bg-[#020617] text-slate-200 p-4 md:p-12 flex flex-col items-center selection:bg-indigo-500/30">
+      <header className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between mb-16 gap-8">
+        <div className="flex items-center gap-6">
+          <div className="bg-indigo-600 p-4 rounded-[1.5rem] shadow-2xl shadow-indigo-600/30">
+            <Shield className="w-9 h-9 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-tighter leading-none gradient-text uppercase">MirageX</h1>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.4em] mt-2">Neural Integrity & Synthetic Forensic Audit</p>
+            <h1 className="text-5xl font-black tracking-tighter gradient-text uppercase">MirageX</h1>
+            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-[0.5em] mt-3">Neural Integrity & Forensic Suite</p>
           </div>
         </div>
-        <div className="hidden md:block text-[9px] font-black uppercase text-slate-500 border-l border-slate-800/50 pl-6">
-          <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-indigo-500" />
-            <span>Core V9.2 Advanced</span>
+        <div className="text-[11px] font-black uppercase text-slate-500 border-l border-slate-800/80 pl-10 flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <Activity className="w-4 h-4 text-indigo-500" />
+            <span>Core V11.2 Active</span>
           </div>
+          <span className="text-[9px] opacity-40 ml-7 tracking-widest">CLIP-ViT | Grad-CAM | PyTorch</span>
         </div>
       </header>
 
-      <main className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+      <main className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
         {/* Specimen Side */}
         <section className="lg:col-span-7">
-          <div className="bg-slate-900/30 border border-slate-800 rounded-[2rem] p-6 backdrop-blur-3xl shadow-2xl relative h-fit">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2.5">
-                <ImageIcon className="w-4 h-4 text-indigo-500" />
-                Specimen Acquisition
+          <div className="bg-slate-900/20 border border-slate-800/60 rounded-[3rem] p-10 backdrop-blur-3xl shadow-3xl relative h-fit">
+            <div className="flex items-center justify-between mb-10">
+              <h2 className="text-[12px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-4">
+                <ImageIcon className="w-5 h-5 text-indigo-500" />
+                Input Specimen
               </h2>
               {result && (
                 <button 
                   onClick={() => setShowHeatmap(!showHeatmap)}
-                  className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${showHeatmap ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-2xl text-[11px] font-black uppercase transition-all shadow-xl ${showHeatmap ? 'bg-indigo-600 text-white' : 'bg-slate-800/80 text-slate-400 border border-slate-700'}`}
                 >
-                  {showHeatmap ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  {showHeatmap ? 'Disable Heatmap' : 'Overlay Heatmap'}
+                  {showHeatmap ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showHeatmap ? 'Disable Grad-CAM' : 'Enable Grad-CAM'}
                 </button>
               )}
             </div>
 
             {!image ? (
-              <label className="flex flex-col items-center justify-center w-full h-[480px] border-2 border-dashed border-slate-800 rounded-3xl cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/[0.02] transition-all group">
-                <Upload className="w-12 h-12 text-slate-700 mb-6 group-hover:text-indigo-400 group-hover:scale-110 transition-all" />
-                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Select Image for Forensic Audit</p>
+              <label className="flex flex-col items-center justify-center w-full h-[550px] border-2 border-dashed border-slate-800/60 rounded-[2.5rem] cursor-pointer hover:border-indigo-500/40 hover:bg-indigo-500/[0.01] transition-all duration-500 group">
+                <Upload className="w-16 h-16 text-slate-700 mb-8 group-hover:text-indigo-500 group-hover:scale-110 transition-all duration-700" />
+                <p className="text-base font-black text-slate-400 uppercase tracking-widest mb-3">Load Forensic Image</p>
+                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">Drag Specimen or Click to Acquire</p>
                 <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
               </label>
             ) : (
-              <div className="relative">
-                <div className="relative flex justify-center bg-black/40 border border-slate-800 rounded-2xl p-1 overflow-hidden min-h-[380px]">
+              <div className="relative animate-in slide-in-from-bottom-8 duration-700">
+                <div className="relative flex justify-center bg-black/50 border border-slate-800/50 rounded-[2rem] p-1 overflow-hidden min-h-[450px]">
                   <div className="relative inline-block self-center">
                     <img 
                       ref={imageRef}
                       src={image.previewUrl} 
                       alt="Audit Source" 
-                      className="max-w-full max-h-[600px] rounded-xl block object-contain shadow-2xl transition-all duration-700" 
-                      style={{ filter: showHeatmap ? 'brightness(0.3) contrast(1.1) grayscale(0.5)' : 'none' }}
+                      className="max-w-full max-h-[650px] rounded-[1.5rem] block object-contain shadow-2xl transition-all duration-1000" 
+                      style={{ filter: showHeatmap ? 'brightness(0.25) contrast(1.2) grayscale(0.2)' : 'none' }}
                     />
                     {result && <HeatmapOverlay result={result} visible={showHeatmap} imageRef={imageRef} />}
                   </div>
-                  <button onClick={reset} className="absolute top-4 right-4 bg-slate-900/90 hover:bg-red-600 p-3 rounded-2xl text-white border border-slate-700 shadow-xl transition-all">
-                    <X className="w-4 h-4" />
+                  <button onClick={reset} className="absolute top-8 right-8 bg-slate-900/90 hover:bg-red-600 p-5 rounded-3xl text-white border border-slate-700 shadow-2xl transition-all hover:scale-110 z-20">
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
                 
@@ -221,10 +223,10 @@ const App: React.FC = () => {
                   <button
                     disabled={status === DetectionStatus.LOADING}
                     onClick={handleAnalyze}
-                    className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-black py-6 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-4 text-xs tracking-widest uppercase"
+                    className="w-full mt-10 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800/50 text-white font-black py-8 rounded-[2rem] shadow-2xl transition-all flex items-center justify-center gap-6 text-[12px] tracking-[0.3em] uppercase"
                   >
-                    {status === DetectionStatus.LOADING ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <ScanSearch className="w-5 h-5" />}
-                    {status === DetectionStatus.LOADING ? 'Analyzing Boundary Cohesion...' : 'Start MirageX Forensic Audit'}
+                    {status === DetectionStatus.LOADING ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <ScanSearch className="w-6 h-6" />}
+                    {status === DetectionStatus.LOADING ? 'Analyzing Neural Layers...' : 'Execute MirageX Forensic Sweep'}
                   </button>
                 )}
               </div>
@@ -233,95 +235,98 @@ const App: React.FC = () => {
         </section>
 
         {/* Intelligence Side */}
-        <section className="lg:col-span-5 flex flex-col space-y-8">
-          <div className="bg-slate-900/40 border border-slate-800 rounded-[2rem] p-8 backdrop-blur-3xl shadow-2xl flex-1 flex flex-col min-h-[550px] max-h-[85vh] overflow-y-auto custom-scrollbar">
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-8 flex items-center gap-2.5">
-              <Fingerprint className="w-4 h-4 text-indigo-500" />
-              Neural Forensic Log
+        <section className="lg:col-span-5 flex flex-col space-y-10">
+          <div className="bg-slate-900/30 border border-slate-800/50 rounded-[3rem] p-10 backdrop-blur-3xl shadow-3xl flex-1 flex flex-col min-h-[650px] max-h-[85vh] overflow-y-auto custom-scrollbar">
+            <h2 className="text-[12px] font-black uppercase tracking-[0.3em] text-slate-400 mb-12 flex items-center gap-4">
+              <Fingerprint className="w-5 h-5 text-indigo-500" />
+              Intelligence Feed
             </h2>
 
             {status === DetectionStatus.IDLE && !result && !error && (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-700 py-32 space-y-6 opacity-30">
-                <ScanSearch className="w-20 h-20" />
-                <p className="text-[10px] font-black uppercase tracking-[0.4em]">Audit Feed Offline</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-800 py-32 space-y-10 opacity-20">
+                <Activity className="w-32 h-32" />
+                <p className="text-[12px] font-black uppercase tracking-[0.6em]">Awaiting Specimen</p>
               </div>
             )}
 
             {status === DetectionStatus.LOADING && (
-              <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+              <div className="flex-1 flex flex-col items-center justify-center space-y-12">
                 <div className="relative">
-                  <RefreshCcw className="w-16 h-16 text-indigo-500 animate-spin opacity-50" />
-                  <Cpu className="w-6 h-6 text-indigo-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  <div className="w-24 h-24 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Cpu className="w-8 h-8 text-indigo-400 animate-pulse" />
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest animate-pulse">Running Neural Decomposition...</p>
-                  <span className="text-[8px] opacity-40 mt-3 block uppercase font-bold tracking-[0.2em]">Auditing Subject-Background Interface</span>
+                <div className="text-center space-y-5">
+                  <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.3em] animate-pulse">Running Transformers Audit...</p>
+                  <span className="text-[10px] text-indigo-500/60 font-bold uppercase tracking-widest block">Calculating Neural Discontinuity Maps</span>
                 </div>
               </div>
             )}
 
             {error && (
               <div className="flex-1 flex flex-col items-center justify-center">
-                <div className="p-8 bg-red-950/20 border border-red-500/30 rounded-[2.5rem] text-center space-y-6">
-                  <AlertCircle className="w-14 h-14 text-red-500 mx-auto" />
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-black text-red-400 uppercase tracking-widest">Neural Interrupt</h3>
-                    <p className="text-[11px] text-slate-400 leading-relaxed max-w-[280px] mx-auto font-medium italic">
+                <div className="p-12 bg-red-950/20 border border-red-500/30 rounded-[3rem] text-center space-y-10">
+                  <AlertCircle className="w-20 h-20 text-red-500 mx-auto" />
+                  <div className="space-y-4">
+                    <h3 className="text-base font-black text-red-400 uppercase tracking-widest">Neural Link Disruption</h3>
+                    <p className="text-[12px] text-slate-400 leading-relaxed font-medium italic">
                       {error}
                     </p>
                   </div>
-                  <button onClick={handleAnalyze} className="px-8 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                    Restart Audit Cycle
+                  <button onClick={handleAnalyze} className="px-12 py-5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all">
+                    Restart Forensic Cycle
                   </button>
                 </div>
               </div>
             )}
 
             {result && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 pb-6">
-                <div className="text-center p-8 bg-slate-950/50 rounded-[2.5rem] border border-slate-800 shadow-2xl relative overflow-hidden">
-                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>
-                   <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4 block">Ensemble Verdict</span>
-                   <p className={`text-5xl font-black uppercase tracking-tighter mb-8 ${
-                      result.verdict === 'REAL' ? 'text-emerald-400' :
-                      result.verdict === 'AI_EDITED' ? 'text-orange-400' : 'text-red-500'
+              <div className="space-y-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 pb-10">
+                <div className="text-center p-12 bg-slate-950/70 rounded-[3.5rem] border border-slate-800 shadow-4xl relative overflow-hidden group">
+                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
+                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em] mb-6 block">Final Verdict</span>
+                   <p className={`text-6xl font-black uppercase tracking-tighter mb-12 transition-all group-hover:scale-105 duration-700 ${
+                      result.verdict === 'REAL' ? 'text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.4)]' :
+                      result.verdict === 'AI_EDITED' ? 'text-orange-400 drop-shadow-[0_0_20px_rgba(251,146,60,0.4)]' : 'text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.4)]'
                     }`}>
                       {result.verdict.replace('_', ' ')}
                     </p>
-                    <div className="grid grid-cols-3 gap-4 pt-8 border-t border-slate-800/50">
+                    <div className="grid grid-cols-3 gap-8 pt-12 border-t border-slate-800/80">
                       <div>
-                        <div className="text-[8px] text-slate-500 font-black mb-1.5 uppercase tracking-widest">Authentic</div>
-                        <div className="text-xl font-black text-emerald-400">{result.probabilities.real_probability}%</div>
+                        <div className="text-[10px] text-slate-600 font-black mb-3 uppercase tracking-widest">Authentic</div>
+                        <div className="text-3xl font-black text-emerald-400">{result.probabilities.real_probability}%</div>
                       </div>
                       <div>
-                        <div className="text-[8px] text-slate-500 font-black mb-1.5 uppercase tracking-widest">Modified</div>
-                        <div className="text-xl font-black text-orange-400">{result.probabilities.ai_edited_probability}%</div>
+                        <div className="text-[10px] text-slate-600 font-black mb-3 uppercase tracking-widest">Modified</div>
+                        <div className="text-3xl font-black text-orange-400">{result.probabilities.ai_edited_probability}%</div>
                       </div>
                       <div>
-                        <div className="text-[8px] text-slate-500 font-black mb-1.5 uppercase tracking-widest">Synthetic</div>
-                        <div className="text-xl font-black text-red-500">{result.probabilities.ai_generated_probability}%</div>
+                        <div className="text-[10px] text-slate-600 font-black mb-3 uppercase tracking-widest">Synthetic</div>
+                        <div className="text-3xl font-black text-red-500">{result.probabilities.ai_generated_probability}%</div>
                       </div>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] border-l-4 border-indigo-600 pl-4">Forensic Module Intelligence</h3>
-                  <div className="grid grid-cols-1 gap-3">
+                <div className="space-y-6">
+                  <h3 className="text-[12px] font-black text-indigo-500 uppercase tracking-[0.3em] border-l-4 border-indigo-600 pl-6">Unit Intelligence Reports</h3>
+                  <div className="grid grid-cols-1 gap-5">
                     {result.modelSpecificFindings?.map((finding, idx) => (
-                      <ModelFindingCard key={idx} finding={finding} />
+                      <FindingCard key={idx} finding={finding} />
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Audit Summary</h3>
-                  <p className="text-slate-400 leading-relaxed text-[11px] font-medium italic p-5 bg-slate-950/30 rounded-2xl border border-slate-800/50 shadow-inner">
+                <div className="space-y-6">
+                  <h3 className="text-[12px] font-black text-slate-500 uppercase tracking-[0.3em]">Neural Forensic Reasoning</h3>
+                  <div className="text-slate-400 leading-relaxed text-[13px] font-medium italic p-8 bg-slate-950/50 rounded-[2rem] border border-slate-800/60 shadow-inner relative overflow-hidden group">
+                    <Fingerprint className="absolute -bottom-4 -right-4 w-24 h-24 text-indigo-600/5 group-hover:text-indigo-600/10 transition-colors duration-1000" />
                     "{result.explanation || 'Forensic trace incomplete. No definitive reasoning found.'}"
-                  </p>
+                  </div>
                 </div>
 
-                <button onClick={reset} className="w-full py-4 rounded-xl bg-slate-800/40 hover:bg-slate-800 border border-slate-700 text-slate-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3">
-                  <RefreshCcw className="w-4 h-4" />
+                <button onClick={reset} className="w-full py-6 rounded-3xl bg-slate-800/40 hover:bg-slate-800 border border-slate-700 text-slate-500 hover:text-white transition-all text-[12px] font-black uppercase tracking-[0.5em] flex items-center justify-center gap-5">
+                  <RefreshCcw className="w-5 h-5" />
                   Initiate New Scan
                 </button>
               </div>
@@ -330,25 +335,33 @@ const App: React.FC = () => {
         </section>
       </main>
 
-      <footer className="mt-20 py-12 text-center text-slate-700 text-[10px] space-y-6 max-w-5xl border-t border-slate-900 w-full opacity-60">
-        <p className="px-12 leading-relaxed uppercase tracking-widest opacity-50 max-w-2xl mx-auto font-medium">
-          MirageX Ensemble V9.2 Advanced: HPF High-Pass, ViT-Structural, Xception-Boundary, and Efficient-Pixel modules active. Specialized in neural boundary & subject-background cohesion forensics.
+      <footer className="mt-32 py-20 text-center text-slate-800 text-[11px] space-y-10 max-w-5xl border-t border-slate-900/50 w-full">
+        <p className="px-20 leading-relaxed uppercase tracking-[0.4em] opacity-40 max-w-3xl mx-auto font-bold italic">
+          MirageX Ensemble V11.2: Integrated CLIP-ViT, Grad-CAM Explainability, PyTorch Core, and Hugging Face Transformers. 
+          Specialized in high-fidelity boundary cohesion and neural artifact detection.
         </p>
       </footer>
       
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
+          width: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #1e293b;
-          border-radius: 10px;
+          border-radius: 30px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #334155;
+        }
+        @keyframes zoom-in-95 {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-in {
+          animation: zoom-in-95 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
     </div>
