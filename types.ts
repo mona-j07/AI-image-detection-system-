@@ -24,7 +24,7 @@ export interface AnalysisResult {
   keyArtifacts: string[];
   modelSpecificFindings: ModelFinding[];
   /**
-   * Optimized 16x16 grid for ultra-fast inference (reduced token count).
+   * 16x16 grid for spatial artifact density.
    * Values 0.0 to 1.0.
    */
   heatmapGrid: number[][];
