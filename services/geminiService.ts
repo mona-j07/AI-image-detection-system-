@@ -6,18 +6,17 @@ import { AnalysisResult } from "../types";
  * MirageX Forensic Intelligence Service
  * 
  * DESIGN PATTERN:
- * 1. Primary: Tries to use the direct platform-injected process.env.API_KEY.
- * 2. Secondary: If you want to use your custom backend, change USE_BACKEND to true.
- * 3. Fallback: Iterates through available models to find one with remaining quota.
+ * 1. Primary: Uses direct platform-injected process.env.API_KEY.
+ * 2. Fallback: Iterates through verified model names to bypass RESOURCE_EXHAUSTED errors.
  */
 const USE_BACKEND = false; 
 
-// List of models to try in order of preference. 
-// We include several Flash variants to maximize the chance of finding available free quota.
+// Optimized list of valid models to try in order of availability and quota efficiency.
 const MODELS_TO_TRY = [
   "gemini-3-flash-preview",
   "gemini-flash-latest",
-  "gemini-2.5-flash-lite-latest"
+  "gemini-flash-lite-latest",
+  "gemini-3-pro-preview"
 ];
 
 export const analyzeImage = async (base64Image: string): Promise<AnalysisResult> => {
@@ -90,7 +89,7 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
 
   for (const modelName of MODELS_TO_TRY) {
     try {
-      console.log(`Attempting forensic sweep with engine: ${modelName}`);
+      console.log(`Initializing forensic sweep with engine: ${modelName}`);
       
       const response = await ai.models.generateContent({
         model: modelName,
@@ -116,20 +115,22 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
       lastError = error;
       const errorMsg = error.message || "";
       
-      // If we hit a quota error (429), try the next model in the list
-      if (errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
-        console.warn(`Model ${modelName} quota exhausted. Rotating to next available engine...`);
+      // If quota exceeded or model not found (due to versioning), try the next model
+      if (errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('404') || errorMsg.includes('NOT_FOUND')) {
+        console.warn(`Engine ${modelName} unavailable or exhausted. Rotating to secondary core...`);
         continue;
       }
       
-      // For other critical errors, throw immediately
+      // Stop and throw if it's a non-quota error
       throw error;
     }
   }
 
-  // If we reach here, all models in the list were exhausted
-  console.error("All available forensic engines are currently at capacity.", lastError);
-  throw new Error("QUOTA_EXHAUSTED: All neural forensic engines are cooling down. Please try again in a few minutes or switch API keys.");
+  throw new Error(
+    lastError?.message?.includes('429') 
+      ? "QUOTA_EXHAUSTED: All neural forensic engines are currently at capacity. Please try again in a few minutes or provide a custom API key." 
+      : "MirageX Core Failure: Unable to establish stable neural link. Check network connectivity."
+  );
 };
 
 const analyzeWithBackend = async (base64Image: string): Promise<AnalysisResult> => {
