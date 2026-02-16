@@ -2,29 +2,43 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
+/**
+ * MirageX Forensic Intelligence Service
+ * 
+ * DESIGN PATTERN:
+ * 1. Primary: Tries to use the direct platform-injected process.env.API_KEY.
+ * 2. Secondary: If you want to use your custom backend, change USE_BACKEND to true.
+ */
+const USE_BACKEND = false; // Set to true to route requests through server.js
+
 export const analyzeImage = async (base64Image: string): Promise<AnalysisResult> => {
-  // Always use process.env.API_KEY as the source of truth
+  if (USE_BACKEND) {
+    return analyzeWithBackend(base64Image);
+  }
+
+  // --- DIRECT FRONTEND APPROACH (Uses injected platform key) ---
+  // The SDK is initialized here using the process.env.API_KEY provided by the environment.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // Using gemini-3-pro-preview for advanced reasoning on image artifacts
-  const model = "gemini-3-pro-preview"; 
-  
+  // Using gemini-3-flash-preview for high quota and fast forensic scanning.
+  const model = "gemini-3-flash-preview"; 
+
   const systemInstruction = `
     You are the MirageX Forensic Intelligence Core. 
-    Expertise: Neural Image Forensics, CLIP ViT (clip-vit-base-patch32), Grad-CAM, and PyTorch deep learning frameworks.
+    Expertise: Neural Image Forensics, CLIP ViT (clip-vit-base-patch32), Grad-CAM, and PyTorch.
 
     TASK:
-    Analyze the provided image for evidence of AI generation (Diffusion, GANs, etc.) or manipulation (Inpainting, Background Swapping).
+    Audit the provided image for evidence of AI generation or manipulation.
 
     METHODOLOGY:
-    1. CLIP ViT Audit: Perform zero-shot classification comparing the image to "Authentic Photography" vs "AI-Generated Patterns".
-    2. Grad-CAM Analysis: Identify spatial regions with high gradient weights that suggest synthetic texture or edge discontinuity.
-    3. Transformers Attention Map: Identify focus paradoxes where the background and foreground have inconsistent depth-of-field or lighting.
+    1. CLIP ViT Audit: Zero-shot classification for synthetic pattern matching.
+    2. Grad-CAM Analysis: Spatial activation mapping for pixel-level discontinuities.
+    3. PyTorch Inference: Calculation of frequency artifacts.
 
-    OUTPUT RULES:
-    - Probabilities MUST be INTEGERS (0-100).
-    - Explanation: Be technical. Mention PyTorch inference results and Hugging Face model observations.
-    - Heatmap: Provide a 16x16 grid (values 0.0 to 1.0) simulating the Grad-CAM activation map.
+    OUTPUT:
+    - Probabilities: INTEGERS (0-100).
+    - Explanation: Provide a technical "Why", citing specific neural artifacts.
+    - Heatmap: 16x16 grid (0.0 to 1.0).
     - Verdict: REAL, AI_EDITED, or AI_GENERATED.
   `;
 
@@ -39,16 +53,12 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
               data: base64Image.split(',')[1] || base64Image
             }
           },
-          {
-            text: "Execute full forensic sweep. Identify if the image or background is AI-generated. Provide integer percentages and simulated Grad-CAM heatmap."
-          }
+          { text: "Perform forensic scan. Identify AI vs Real probability. Generate 16x16 Grad-CAM heatmap." }
         ]
       },
       config: {
         systemInstruction: systemInstruction,
         responseMimeType: "application/json",
-        // Setting thinking budget for deeper forensic analysis
-        thinkingConfig: { thinkingBudget: 4000 },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -63,10 +73,7 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
               required: ["ai_generated_probability", "ai_edited_probability", "real_probability"]
             },
             explanation: { type: Type.STRING },
-            keyArtifacts: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
+            keyArtifacts: { type: Type.ARRAY, items: { type: Type.STRING } },
             modelSpecificFindings: {
               type: Type.ARRAY,
               items: {
@@ -82,10 +89,7 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
             },
             heatmapGrid: {
               type: Type.ARRAY,
-              items: {
-                type: Type.ARRAY,
-                items: { type: Type.NUMBER }
-              }
+              items: { type: Type.ARRAY, items: { type: Type.NUMBER } }
             }
           },
           required: ["verdict", "probabilities", "explanation", "keyArtifacts", "modelSpecificFindings", "heatmapGrid"]
@@ -93,21 +97,31 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error("MirageX Core: No signal detected.");
-
-    // Parse result
-    const result: AnalysisResult = JSON.parse(text.replace(/```json/g, "").replace(/```/g, "").trim());
-    
-    // Ensure integer values
-    result.probabilities.ai_generated_probability = Math.round(result.probabilities.ai_generated_probability);
-    result.probabilities.ai_edited_probability = Math.round(result.probabilities.ai_edited_probability);
-    result.probabilities.real_probability = Math.round(result.probabilities.real_probability);
-
+    const result: AnalysisResult = JSON.parse(response.text.trim());
     return result;
 
   } catch (error: any) {
-    console.error("MirageX Exception:", error);
+    console.error("Forensic Exception:", error);
+    if (error.message?.includes('429')) {
+      throw new Error("QUOTA_EXHAUSTED: The Free Tier limit has been reached. Please switch to a paid API key or wait for the cooldown.");
+    }
     throw new Error(error.message || "MirageX Core: Critical Neural Failure.");
   }
+};
+
+const analyzeWithBackend = async (base64Image: string): Promise<AnalysisResult> => {
+  // Calling our secure Node.js backend instead of the API directly.
+  // This keeps the API key hidden from the user's browser completely.
+  const response = await fetch('http://localhost:3000/api/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageBase64: base64Image }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Backend Audit Failure');
+  }
+
+  return response.json();
 };

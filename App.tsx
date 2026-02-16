@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Shield, Upload, ImageIcon, RefreshCcw, ScanSearch, Cpu, Eye, EyeOff, X, AlertCircle, Fingerprint, Activity } from 'lucide-react';
+import { Shield, Upload, ImageIcon, RefreshCcw, ScanSearch, Cpu, Eye, EyeOff, X, AlertCircle, Fingerprint, Activity, Zap, Key } from 'lucide-react';
 import { DetectionStatus, AnalysisResult, ImageData, ModelFinding } from './types';
 import { analyzeImage } from './services/geminiService';
 
@@ -68,7 +68,7 @@ const HeatmapOverlay: React.FC<{ result: AnalysisResult; visible: boolean; image
     <canvas 
       ref={canvasRef} 
       className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}
-      style={{ zIndex: 10, mixBlendMode: 'color-dodge' }}
+      style={{ zIndex: 10, mixBlendMode: 'screen' }}
     />
   );
 };
@@ -84,7 +84,7 @@ const FindingCard: React.FC<{ finding: ModelFinding }> = ({ finding }) => (
         {finding.verdict.replace('_', ' ')} ({finding.confidence}%)
       </span>
     </div>
-    <p className="text-[11px] text-slate-400 leading-relaxed">
+    <p className="text-[11px] text-slate-400 leading-relaxed italic">
       {finding.description}
     </p>
   </div>
@@ -108,10 +108,6 @@ const App: React.FC = () => {
     }
 
     if (file) {
-      if (!file.type.startsWith('image/')) {
-        setError("Invalid forensic specimen. Please provide an image.");
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage({
@@ -124,7 +120,6 @@ const App: React.FC = () => {
         setResult(null);
         setError(null);
         setStatus(DetectionStatus.IDLE);
-        setShowHeatmap(false);
       };
       reader.readAsDataURL(file);
     }
@@ -142,6 +137,17 @@ const App: React.FC = () => {
     } catch (err: any) {
       setError(err.message || "Forensic sweep failed.");
       setStatus(DetectionStatus.ERROR);
+    }
+  };
+
+  const handleSwitchKey = async () => {
+    // @ts-ignore
+    if (window.aistudio) {
+      // @ts-ignore
+      await window.aistudio.openSelectKey();
+      // Assume success and reset error state
+      setError(null);
+      setStatus(DetectionStatus.IDLE);
     }
   };
 
@@ -165,12 +171,21 @@ const App: React.FC = () => {
             <p className="text-[11px] text-slate-500 font-bold uppercase tracking-[0.5em] mt-2">Neural Forensics & Integrity Suite</p>
           </div>
         </div>
-        <div className="text-[11px] font-black uppercase text-slate-500 border-l border-slate-800 pl-8 flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <Activity className="w-4 h-4 text-emerald-500" />
-            <span>Core V12.0 Active</span>
+        <div className="flex flex-col gap-4 items-end">
+          <div className="text-[11px] font-black uppercase text-slate-500 border-l border-slate-800 pl-8 flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <Activity className="w-4 h-4 text-emerald-500" />
+              <span>Flash Core V15.0 Active</span>
+            </div>
+            <span className="text-[9px] opacity-40 ml-7 uppercase tracking-widest">High Quota Protocol</span>
           </div>
-          <span className="text-[9px] opacity-40 ml-7">CLIP-ViT | GRAD-CAM | PYTORCH</span>
+          <button 
+            onClick={handleSwitchKey}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900/50 border border-slate-800 rounded-xl text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-all"
+          >
+            <Key className="w-3 h-3" />
+            Switch API Key
+          </button>
         </div>
       </header>
 
@@ -200,8 +215,8 @@ const App: React.FC = () => {
                 className="flex flex-col items-center justify-center w-full h-[500px] border-2 border-dashed border-slate-800 rounded-[2rem] cursor-pointer hover:border-indigo-500/40 hover:bg-indigo-500/[0.02] transition-all duration-500 group"
               >
                 <Upload className="w-16 h-16 text-slate-700 mb-8 group-hover:text-indigo-500 group-hover:scale-110 transition-all" />
-                <p className="text-base font-black text-slate-400 uppercase tracking-widest mb-2">Drop Specimen Image</p>
-                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">JPEG, PNG (Max 10MB)</p>
+                <p className="text-base font-black text-slate-400 uppercase tracking-widest mb-2">Aquire Forensic Target</p>
+                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">Neural Scanning Ready</p>
                 <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
               </label>
             ) : (
@@ -211,9 +226,9 @@ const App: React.FC = () => {
                     <img 
                       ref={imageRef}
                       src={image.previewUrl} 
-                      alt="Forensic Specimen" 
-                      className="max-w-full max-h-[600px] rounded-2xl block object-contain shadow-2xl transition-all duration-1000" 
-                      style={{ filter: showHeatmap ? 'brightness(0.3) contrast(1.2)' : 'none' }}
+                      alt="Forensic Target" 
+                      className="max-w-full max-h-[600px] rounded-2xl block object-contain shadow-2xl transition-all" 
+                      style={{ filter: showHeatmap ? 'brightness(0.3) contrast(1.2) saturate(0.5)' : 'none' }}
                     />
                     {result && <HeatmapOverlay result={result} visible={showHeatmap} imageRef={imageRef} />}
                   </div>
@@ -228,8 +243,8 @@ const App: React.FC = () => {
                     onClick={handleAnalyze}
                     className="w-full mt-10 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-black py-8 rounded-[1.5rem] shadow-2xl transition-all flex items-center justify-center gap-6 text-[12px] tracking-[0.3em] uppercase"
                   >
-                    {status === DetectionStatus.LOADING ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <ScanSearch className="w-6 h-6" />}
-                    {status === DetectionStatus.LOADING ? 'Scanning Neural Layers...' : 'Run Forensic Audit'}
+                    {status === DetectionStatus.LOADING ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6" />}
+                    {status === DetectionStatus.LOADING ? 'Transmitting to Neural Core...' : 'Run Forensic Audit'}
                   </button>
                 )}
               </div>
@@ -241,13 +256,13 @@ const App: React.FC = () => {
           <div className="bg-slate-900/30 border border-slate-800 rounded-[2.5rem] p-10 backdrop-blur-3xl shadow-3xl flex-1 flex flex-col min-h-[600px] max-h-[85vh] overflow-y-auto custom-scrollbar">
             <h2 className="text-[12px] font-black uppercase tracking-[0.3em] text-slate-400 mb-10 flex items-center gap-4">
               <Fingerprint className="w-5 h-5 text-indigo-500" />
-              Intelligence Results
+              Intelligence Feed
             </h2>
 
             {status === DetectionStatus.IDLE && !result && (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-800 py-32 space-y-10 opacity-10">
                 <ScanSearch className="w-32 h-32" />
-                <p className="text-[12px] font-black uppercase tracking-[0.6em]">System Standby</p>
+                <p className="text-[12px] font-black uppercase tracking-[0.6em]">Awaiting Specimen</p>
               </div>
             )}
 
@@ -260,7 +275,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-center space-y-4">
-                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] animate-pulse">Running Transformers Logic...</p>
+                  <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] animate-pulse">Running Transformers Audit...</p>
                 </div>
               </div>
             )}
@@ -269,8 +284,19 @@ const App: React.FC = () => {
               <div className="flex-1 flex flex-col items-center justify-center">
                 <div className="p-10 bg-red-950/20 border border-red-500/30 rounded-3xl text-center space-y-6">
                   <AlertCircle className="w-14 h-14 text-red-500 mx-auto" />
-                  <h3 className="text-sm font-black text-red-400 uppercase tracking-widest">Initialization Failed</h3>
+                  <h3 className="text-sm font-black text-red-400 uppercase tracking-widest">Audit Failure</h3>
                   <p className="text-[12px] text-slate-400 leading-relaxed italic">{error}</p>
+                  
+                  {error.includes('QUOTA') && (
+                    <div className="space-y-4 pt-4">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Try switching to a different API key:</p>
+                      <button onClick={handleSwitchKey} className="w-full py-4 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-500/30 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3">
+                        <Key className="w-4 h-4" />
+                        Enter Private Key
+                      </button>
+                    </div>
+                  )}
+                  
                   <button onClick={handleAnalyze} className="w-full py-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-[10px] font-black uppercase transition-all">Retry Analysis</button>
                 </div>
               </div>
@@ -280,7 +306,7 @@ const App: React.FC = () => {
               <div className="space-y-12 animate-in fade-in duration-700 pb-8">
                 <div className="text-center p-10 bg-slate-950/60 rounded-[2.5rem] border border-slate-800 shadow-4xl relative overflow-hidden group">
                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
-                   <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.5em] mb-4 block">Final Verdict</span>
+                   <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.5em] mb-4 block">Neural Verdict</span>
                    <p className={`text-6xl font-black uppercase tracking-tighter mb-10 ${
                       result.verdict === 'REAL' ? 'text-emerald-400' :
                       result.verdict === 'AI_EDITED' ? 'text-orange-400' : 'text-red-500'
@@ -289,23 +315,23 @@ const App: React.FC = () => {
                     </p>
                     <div className="grid grid-cols-3 gap-6 pt-10 border-t border-slate-800/80">
                       <div>
-                        <div className="text-[9px] text-slate-600 font-black mb-1 uppercase">Real</div>
+                        <div className="text-[9px] text-slate-600 font-black mb-1 uppercase tracking-widest">Authentic</div>
                         <div className="text-2xl font-black text-emerald-400">{result.probabilities.real_probability}%</div>
                       </div>
                       <div>
-                        <div className="text-[9px] text-slate-600 font-black mb-1 uppercase">Edited</div>
+                        <div className="text-[9px] text-slate-600 font-black mb-1 uppercase tracking-widest">Edited</div>
                         <div className="text-2xl font-black text-orange-400">{result.probabilities.ai_edited_probability}%</div>
                       </div>
                       <div>
-                        <div className="text-[9px] text-slate-600 font-black mb-1 uppercase">AI</div>
+                        <div className="text-[9px] text-slate-600 font-black mb-1 uppercase tracking-widest">Synthetic</div>
                         <div className="text-2xl font-black text-red-500">{result.probabilities.ai_generated_probability}%</div>
                       </div>
                     </div>
                 </div>
 
                 <div className="space-y-6">
-                  <h3 className="text-[12px] font-black text-indigo-500 uppercase tracking-[0.3em] border-l-4 border-indigo-600 pl-4">Forensic Reasoning</h3>
-                  <div className="text-slate-400 leading-relaxed text-[13px] font-medium italic p-6 bg-slate-950/40 rounded-3xl border border-slate-800 shadow-inner relative overflow-hidden">
+                  <h3 className="text-[12px] font-black text-indigo-500 uppercase tracking-[0.3em] border-l-4 border-indigo-600 pl-4">Forensic Summary</h3>
+                  <div className="text-slate-400 leading-relaxed text-[13px] font-medium italic p-6 bg-slate-950/40 rounded-3xl border border-slate-800 shadow-inner">
                     "{result.explanation}"
                   </div>
                 </div>
@@ -321,7 +347,7 @@ const App: React.FC = () => {
 
                 <button onClick={reset} className="w-full py-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-[11px] font-black uppercase tracking-[0.4em] flex items-center justify-center gap-4">
                   <RefreshCcw className="w-4 h-4" />
-                  New Audit Scan
+                  Clear Forensic Log
                 </button>
               </div>
             )}
@@ -331,8 +357,8 @@ const App: React.FC = () => {
 
       <footer className="mt-32 py-16 text-center text-slate-800 text-[10px] space-y-6 max-w-5xl border-t border-slate-900 w-full opacity-60">
         <p className="px-20 leading-relaxed uppercase tracking-[0.4em] font-bold">
-          MirageX V12.0 Engine: Integrated CLIP-ViT Classification, Grad-CAM Visualization, and PyTorch Pixel Analysis. 
-          Detection focuses on neural artifacts, focus paradoxes, and boundary cohesion.
+          MirageX V15.0 Protocol: CLIP ViT Zero-Shot Classification | Grad-CAM Visualization | PyTorch Pixel Inference. 
+          Audit focuses on focus paradoxes, lighting inconsistency, and frequency domain anomalies.
         </p>
       </footer>
       
