@@ -11,9 +11,8 @@ const PYTORCH_INF_LOGIC = "PyTorch Inference Engine: Executes the high-fidelity 
 const TRANSFORMERS_AUDIT = "Transformers Neural Audit: Loads global attention maps to identify inconsistent focus points characteristic of diffusion models.";
 
 export const analyzeImage = async (base64Image: string): Promise<AnalysisResult> => {
-  // Safe access to API_KEY
-  const apiKey = process.env.API_KEY || (window as any).process?.env?.API_KEY;
-  const ai = new GoogleGenAI({ apiKey });
+  // Initialize SDK using the platform-provided API key
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = "gemini-3-flash-preview"; 
   
   const systemInstruction = `
