@@ -2,35 +2,30 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-/**
- * MirageX Forensic Logic Ensemble (Requested Components)
- */
-const CLIP_VIT_LOGIC = "CLIP ViT (clip-vit-base-patch32): Zero-shot classifier using Hugging Face Transformers to detect semantic and structural synthetics.";
-const GRAD_CAM_LOGIC = "Grad-CAM Explainability: Calculates gradients at the final convolutional layers to highlight influential synthetic regions.";
-const PYTORCH_INF_LOGIC = "PyTorch Inference Engine: Executes the high-fidelity tensor calculations for pixel-level discontinuity detection.";
-const TRANSFORMERS_AUDIT = "Transformers Neural Audit: Loads global attention maps to identify inconsistent focus points characteristic of diffusion models.";
-
 export const analyzeImage = async (base64Image: string): Promise<AnalysisResult> => {
-  // Initialize SDK using the platform-provided API key
+  // Always use process.env.API_KEY as the source of truth
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const model = "gemini-3-flash-preview"; 
+  
+  // Using gemini-3-pro-preview for advanced reasoning on image artifacts
+  const model = "gemini-3-pro-preview"; 
   
   const systemInstruction = `
-    You are the MirageX Core Intelligence, a world-class Neural Forensic Suite.
-    Your mission: Audit the image for AI synthesis or manipulation using a simulated ensemble of the following tools:
-    1. ${CLIP_VIT_LOGIC}
-    2. ${GRAD_CAM_LOGIC}
-    3. ${PYTORCH_INF_LOGIC}
-    4. ${TRANSFORMERS_AUDIT}
+    You are the MirageX Forensic Intelligence Core. 
+    Expertise: Neural Image Forensics, CLIP ViT (clip-vit-base-patch32), Grad-CAM, and PyTorch deep learning frameworks.
 
-    DIAGNOSTIC REQUIREMENTS:
-    - Percentage Output: Must be INTEGERS (0-100). E.g., "99", NOT "0.99".
-    - Explainability: Provide a detailed "Why" in the explanation field, citing specific neural artifacts.
-    - Spatial Map: Provide a 16x16 heatmap grid (0.0 to 1.0) showing artifact density (simulated Grad-CAM).
-    - Verdicts: REAL, AI_EDITED (for inpainting/background swap), or AI_GENERATED.
+    TASK:
+    Analyze the provided image for evidence of AI generation (Diffusion, GANs, etc.) or manipulation (Inpainting, Background Swapping).
 
-    BACKGROUND FORENSICS:
-    If the subject lighting doesn't match the background environment or the edge cohesion is broken, flag as AI_EDITED.
+    METHODOLOGY:
+    1. CLIP ViT Audit: Perform zero-shot classification comparing the image to "Authentic Photography" vs "AI-Generated Patterns".
+    2. Grad-CAM Analysis: Identify spatial regions with high gradient weights that suggest synthetic texture or edge discontinuity.
+    3. Transformers Attention Map: Identify focus paradoxes where the background and foreground have inconsistent depth-of-field or lighting.
+
+    OUTPUT RULES:
+    - Probabilities MUST be INTEGERS (0-100).
+    - Explanation: Be technical. Mention PyTorch inference results and Hugging Face model observations.
+    - Heatmap: Provide a 16x16 grid (values 0.0 to 1.0) simulating the Grad-CAM activation map.
+    - Verdict: REAL, AI_EDITED, or AI_GENERATED.
   `;
 
   try {
@@ -45,14 +40,15 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
             }
           },
           {
-            text: "Perform exhaustive MirageX forensic sweep. Calculate AI vs Real probabilities as integers. Generate simulated Grad-CAM heatmap."
+            text: "Execute full forensic sweep. Identify if the image or background is AI-generated. Provide integer percentages and simulated Grad-CAM heatmap."
           }
         ]
       },
       config: {
         systemInstruction: systemInstruction,
         responseMimeType: "application/json",
-        thinkingConfig: { thinkingBudget: 0 },
+        // Setting thinking budget for deeper forensic analysis
+        thinkingConfig: { thinkingBudget: 4000 },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -98,11 +94,12 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
     });
 
     const text = response.text;
-    if (!text) throw new Error("MirageX Core: Neural signal disrupted.");
+    if (!text) throw new Error("MirageX Core: No signal detected.");
 
+    // Parse result
     const result: AnalysisResult = JSON.parse(text.replace(/```json/g, "").replace(/```/g, "").trim());
     
-    // Safety rounding to ensure 0-100 integers
+    // Ensure integer values
     result.probabilities.ai_generated_probability = Math.round(result.probabilities.ai_generated_probability);
     result.probabilities.ai_edited_probability = Math.round(result.probabilities.ai_edited_probability);
     result.probabilities.real_probability = Math.round(result.probabilities.real_probability);
@@ -110,7 +107,7 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
     return result;
 
   } catch (error: any) {
-    console.error("Forensic Fault:", error);
-    throw new Error(error.message || "MirageX encountered a critical neural exception.");
+    console.error("MirageX Exception:", error);
+    throw new Error(error.message || "MirageX Core: Critical Neural Failure.");
   }
 };
