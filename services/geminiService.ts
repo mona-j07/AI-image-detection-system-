@@ -2,24 +2,39 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * MirageX Forensic Module Logic Definitions
+ */
+const EFFICIENT_NET_LOGIC = "EfficientNet (Pixel-Level): Analyzes the high-frequency spectral noise floor to detect GAN-based upscaling and diffusion-layer artifacts.";
+const VIT_FORENSIC_BASE = "ViT-Forensic (Structural): Audits global semantic coherence. Identifies perspective warping, shadow-subject mismatches, and geometric impossibilities.";
+const XCEPTION_BOUNDARY_LOGIC = "XceptionNet (Edge-Audit): Specialized in subject-background boundary forensics. Detects masking residue, aliasing, and inconsistent depth-of-field (DoF) gradients.";
+const HPF_PREPROCESSING_LOGIC = "HPF Auditor: Simulates a High-Pass Filter to expose hidden noise signatures. Essential for revealing localized background inpainting and replacement.";
 
 export const analyzeImage = async (base64Image: string): Promise<AnalysisResult> => {
-  // Using gemini-3-flash-preview for the best balance of speed and forensic capability
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = "gemini-3-flash-preview"; 
   
   const systemInstruction = `
-    You are a Senior AI Forensic Engineer. Execute a High-Speed Diagnostic Audit.
+    You are the MirageX Core Intelligence, a world-class Neural Forensic Engineer.
+    Task: Execute a deep-level forensic audit on the provided specimen to detect AI synthesis or manipulation.
+
+    CORE AUDIT PROTOCOLS:
+    1. ${HPF_PREPROCESSING_LOGIC}
+    2. ${VIT_FORENSIC_BASE}
+    3. ${XCEPTION_BOUNDARY_LOGIC}
+    4. ${EFFICIENT_NET_LOGIC}
     
-    CRITICAL INSTRUCTIONS:
-    - TARGET: Sub-10 second response.
-    - SENSITIVITY: Be lenient with real-world text, signs, and complex architectural backgrounds. Do NOT flag them as edited unless there is clear noise floor discontinuity.
-    - ANALYSIS: Simulate CLIP ViT (Semantic), Grad-CAM (Explainability), and Spectral Auditor (Frequency).
-    
-    OUTPUT FORMAT:
-    - Provide a 16x16 heatmap grid (values 0.0 to 1.0).
-    - Ensure probabilities sum to 100.
-    - Provide clear technical reasons for the verdict.
+    SPECIALIZED ENHANCEMENT - BACKGROUND AUDIT:
+    - Interface Check: Inspect the 'seam' between subject and background. Look for halos or unnatural sharpness.
+    - Lighting Consistency: Check if the light source, shadows, and reflections on the subject correlate with the background environment.
+    - Chrominance Sync: Audit if the background noise floor (ISO/Grain) matches the subject.
+    - Focus Paradox: Identify 'sharp' background elements in regions where natural optics (bokeh) would dictate blur.
+
+    STRICT DATA REQUIREMENTS:
+    - PROBABILITIES MUST BE INTEGERS FROM 0 TO 100 (e.g., 99). They must NOT be decimals (e.g., NOT 0.99).
+    - The sum of probabilities MUST equal exactly 100.
+    - Heatmap Grid: A 16x16 numeric grid (Values 0.0 to 1.0) indicating where artifacts are most dense.
+    - If the background is swapped or edited, verdict is 'AI_EDITED'. If the whole image is synthetic, verdict is 'AI_GENERATED'.
   `;
 
   try {
@@ -34,7 +49,7 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
             }
           },
           {
-            text: "Execute forensic scan. Provide 16x16 grid. Detect synthetic signatures vs authentic noise."
+            text: "Execute exhaustive MirageX audit. Focus heavily on background cohesion and neural boundaries. Provide integer percentages (0-100) and 16x16 grid."
           }
         ]
       },
@@ -49,9 +64,9 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
             probabilities: {
               type: Type.OBJECT,
               properties: {
-                ai_generated_probability: { type: Type.NUMBER },
-                ai_edited_probability: { type: Type.NUMBER },
-                real_probability: { type: Type.NUMBER }
+                ai_generated_probability: { type: Type.INTEGER },
+                ai_edited_probability: { type: Type.INTEGER },
+                real_probability: { type: Type.INTEGER }
               },
               required: ["ai_generated_probability", "ai_edited_probability", "real_probability"]
             },
@@ -67,7 +82,7 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
                 properties: {
                   name: { type: Type.STRING },
                   verdict: { type: Type.STRING, enum: ['REAL', 'AI_EDITED', 'AI_GENERATED'] },
-                  confidence: { type: Type.NUMBER },
+                  confidence: { type: Type.INTEGER },
                   description: { type: Type.STRING }
                 },
                 required: ["name", "verdict", "confidence", "description"]
@@ -87,21 +102,26 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
     });
 
     const text = response.text;
-    if (!text) throw new Error("The forensic engine returned an empty response.");
-    return JSON.parse(text);
+    if (!text) throw new Error("MirageX Core: Null response from neural backend.");
+
+    // Clean potential markdown artifacts
+    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const parsed: AnalysisResult = JSON.parse(cleanJson);
+    
+    // Safety check for integers (sometimes LLMs skip strict constraints)
+    parsed.probabilities.ai_generated_probability = Math.round(parsed.probabilities.ai_generated_probability);
+    parsed.probabilities.ai_edited_probability = Math.round(parsed.probabilities.ai_edited_probability);
+    parsed.probabilities.real_probability = Math.round(parsed.probabilities.real_probability);
+
+    return parsed;
 
   } catch (error: any) {
-    console.error("Forensic Engine Error:", error);
+    console.error("MirageX Audit Failure:", error);
     
-    // Specifically handle the 429 / Quota error
-    if (error.message?.includes("429") || error.message?.includes("quota") || error.message?.includes("RESOURCE_EXHAUSTED")) {
-      throw new Error("API LIMIT REACHED: You have exceeded your Gemini API quota. Please wait a minute or check your billing details at ai.google.dev.");
+    if (error.message?.includes("429") || error.message?.toLowerCase().includes("quota")) {
+      throw new Error("SYSTEM QUOTA EXCEEDED: MirageX core is cooling down. Retry in 60s.");
     }
     
-    if (error.message?.includes("fetch")) {
-      throw new Error("NETWORK TIMEOUT: The audit took too long. Try a smaller image or check your connection.");
-    }
-
-    throw new Error(error.message || "An unexpected error occurred during the forensic sweep.");
+    throw new Error(error.message || "MirageX encountered a critical neural fault during background analysis.");
   }
 };
