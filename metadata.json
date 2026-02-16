@@ -1,0 +1,7 @@
+{
+  "name": "AI Sentinel - Image Forensics",
+  "description": "An advanced image analysis tool that detects AI-generated artifacts using deep learning principles, providing explainability and confidence scores.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
